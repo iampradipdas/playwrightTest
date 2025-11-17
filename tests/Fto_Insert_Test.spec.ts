@@ -36,12 +36,13 @@ const agencyCode = "WBHG00008434";
 const agencyName = "DISTRICT HORTICULTURE OFFICE HOOGHLY(WBHG00008434)";
 const hoaId = 500025;
 const sanctionNo = generateSanctionNo();
+const jitReferenceNo = generateJitReferenceNo();
 
 test.describe.configure({ mode: 'serial' });
 
 test.describe("JIT Billing Fto Test", () => {
 
-    test('publish to jit allotment', async () => {
+    test('publish to wbjit allotment', async ({pageWithToken}) => {
         const payload = [
             {
                 "IsWithdraw": 0,
@@ -70,8 +71,7 @@ test.describe("JIT Billing Fto Test", () => {
         await publishToQueue("wbjit_ebilling_allotment", payload);
     });
 
-    test('publish json to jit fto', async () => {
-        const jitReferenceNo = generateJitReferenceNo();
+    test('publish json to wbjit fto', async () => {
         console.log("jit ref no: ", jitReferenceNo)
 
         const payload = {
@@ -328,10 +328,29 @@ test.describe("JIT Billing Fto Test", () => {
         await publishToQueue("wbjit_ebilling_fto", payload);
     });
 
-    test('Bill Create for inserted fto', async ({ pageWithToken }) => {
+    test('Bill Create and Verify', async ({ pageWithToken }) => {
         const page = pageWithToken;
         await page.waitForTimeout(1000);
         await page.getByText("JIT-Billing").click();
         await page.locator('a[href="/received-advice"]').click();
+        
+        await page.getByRole('textbox', { name: 'Search By FTO No' }).click();
+        await page.getByRole('textbox', { name: 'Search By FTO No' }).fill(jitReferenceNo.toString());
+        await page.locator('div').filter({ hasText: /^Search By FTO No$/ }).getByRole('button').first().click();
+        await page.locator('.p-checkbox-box').first().click();
+        await page.getByRole('button', { name: 'Generate Bill' }).click();
+        await page.getByRole('button', { name: 'Save' }).click();
+
+        const refText = await page.locator('#swal2-html-container strong').textContent();
+        if (!refText) throw new Error("Reference text not found!");
+        const [referenceNo, version] = refText.split('-');
+        await page.getByRole('button', { name: 'OK' }).click();
+        await page.locator('a[href="/generated-jit-bill"]').click();
+        await page.getByPlaceholder('Search By').click();
+        await page.getByLabel('Reference No').getByText('Reference No').click();
+        await page.getByRole('textbox', { name: 'Enter to Search' }).click();
+        await page.getByRole('textbox', { name: 'Enter to Search' }).fill(referenceNo);
+        await page.locator('button .pi.pi-search').click();
+        await expect(page.locator('tbody')).toContainText(referenceNo);
     })
 });
