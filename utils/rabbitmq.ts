@@ -10,7 +10,7 @@ export async function publishToQueue(queueName: string, data: any) {
         persistent: true
     });
 
-    console.log("Message sent:", jsonData);
+    console.log("Payload Publish to:" + queueName);
 
     await channel.close();
     await connection.close();
