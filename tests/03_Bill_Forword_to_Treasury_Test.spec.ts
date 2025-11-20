@@ -33,7 +33,7 @@ test("Bill Forword Test", async ({ pageWithToken }) => {
             .click();
     });
 
-    await test.step("Insert CPIN → Select Date → Enter Number → Select Vendor → Add", async () => {
+    await test.step("Insert CPIN → Select CPIN Date → Enter CPIN → Select Vendor → Add", async () => {
 
         await page.getByRole("button", { name: "Insert CPIN" }).click();
 
@@ -87,5 +87,6 @@ test("Bill Forword Test", async ({ pageWithToken }) => {
             .toContainText('Bill Forwarded to Treasury Successfully');
 
         await page.getByRole('button', { name: 'OK' }).click();
+        await page.close();
     });
 });

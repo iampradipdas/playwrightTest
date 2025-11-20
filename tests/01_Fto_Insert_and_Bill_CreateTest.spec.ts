@@ -43,7 +43,7 @@ test.describe.configure({ mode: 'serial' });
 
 test.describe("JIT Billing Fto Test", () => {
 
-    test('Publish payload to ebilling allotment Queue', async () => {
+    test('Publish Allotment payload to ebilling allotment Queue', async () => {
         const payload = [
             {
                 "IsWithdraw": 0,
@@ -72,7 +72,7 @@ test.describe("JIT Billing Fto Test", () => {
         await publishToQueue("wbjit_ebilling_allotment", payload);
     });
 
-    test('Publish payload to ebilling Fto queue', async () => {
+    test('Publish FTO payload to ebilling Fto queue', async () => {
         const payload = {
             "FinYear": 2526,
             "JitReferenceId": 87477,
@@ -337,7 +337,7 @@ test.describe("JIT Billing Fto Test", () => {
             await page.locator('a[href="/received-advice"]').click();
         });
 
-        await test.step("Search FTO Number", async () => {
+        await test.step("Search FTO Number For Bill Create", async () => {
             await page.getByRole('textbox', { name: 'Search By FTO No' }).fill(jitReferenceNo.toString());
             await page.locator('div')
                 .filter({ hasText: /^Search By FTO No$/ })
