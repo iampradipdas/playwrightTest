@@ -1,7 +1,7 @@
 import { test, expect } from "../utils/auth.setup";
 import { getData } from "../utils/storage";
 
-test("Bill Forword Test", async ({ pageWithToken }) => {
+test("Bill Forward Test", async ({ pageWithToken }) => {
     const page = pageWithToken;
     await test.step("Navigate → JIT Billing → Generated JIT Bill", async () => {
         await page.getByText("JIT-Billing").click();
