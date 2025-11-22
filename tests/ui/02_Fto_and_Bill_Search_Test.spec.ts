@@ -1,5 +1,5 @@
-import { test, expect } from "../utils/auth.setup";
-import { getData } from "../utils/storage";
+import { test, expect } from "../../utils/auth.setup";
+import { getData } from "../../utils/storage";
 
 test("FTO and Bill Search Test", async ({ pageWithToken }) => {
     const page = pageWithToken;

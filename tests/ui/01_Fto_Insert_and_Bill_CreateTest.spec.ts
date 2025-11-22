@@ -1,6 +1,6 @@
-import { test, expect } from "../utils/auth.setup";
-import { publishToQueue } from "../utils/rabbitmq";
-import { saveData, getData } from "../utils/storage";
+import { test, expect } from "../../utils/auth.setup";
+import { publishToQueue } from "../../utils/rabbitmq";
+import { saveData, getData } from "../../utils/storage";
 
 
 function generateSanctionNo(): string {

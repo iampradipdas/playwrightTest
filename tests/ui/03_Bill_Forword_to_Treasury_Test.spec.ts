@@ -1,5 +1,5 @@
-import { test, expect } from "../utils/auth.setup";
-import { getData } from "../utils/storage";
+import { test, expect } from "../../utils/auth.setup";
+import { getData } from "../../utils/storage";
 
 test("Bill Forward Test", async ({ pageWithToken }) => {
     const page = pageWithToken;
@@ -39,6 +39,7 @@ test("Bill Forward Test", async ({ pageWithToken }) => {
 
         // Select CPIN Date
         await page.getByRole("combobox", { name: "Enter CPIN Date" }).click();
+        await page.waitForTimeout(100);
         await page.locator('.p-datepicker-today, .today, [aria-current="date"]').click();
 
         // Enter CPIN Number
@@ -59,7 +60,10 @@ test("Bill Forward Test", async ({ pageWithToken }) => {
                 items = page.locator('li[role="option"]');
                 await items.first().waitFor({ state: "visible" });
             }
+            await items.nth(i).waitFor({ state: "visible" });
             await items.nth(i).click();
+            await page.waitForTimeout(1000);
+
             await page.getByRole("button", { name: "Add" }).click();
         }
 
