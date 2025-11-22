@@ -4,7 +4,7 @@ import fs from "fs";
 import type { Reporter, FullResult, TestCase, TestResult } from "@playwright/test/reporter";
 
 class ExcelReporter implements Reporter {
-    private apiResults: { name: string; status: string; durationMs: number }[] = [];
+    private apiResults: { name: string; status: string; durationMs: number; apiStatus?: string }[] = [];
     private uiResults: { name: string; status: string; durationMs: number }[] = [];
 
     onTestEnd(test: TestCase, result: TestResult) {
@@ -12,13 +12,32 @@ class ExcelReporter implements Reporter {
         const filePath = test.location?.file || "";
         const normalized = filePath.split(path.sep).join("/").toLowerCase();
 
-        const row = {
+        const row: { name: string; status: string; durationMs: number; apiStatus?: string } = {
             name: test.titlePath().join(" > "),
             status: result.status,
             durationMs,
         };
 
         if (/\/01_api\//.test(normalized) || normalized.includes("/01_api") || normalized.includes("/api/")) {
+            // capture any attached api-status (tests should attach this via testInfo.attach)
+            try {
+                for (const a of result.attachments || []) {
+                    if (a.name === 'api-status') {
+                        let val: string | undefined;
+                        try {
+                            if ((a as any).path) {
+                                val = fs.readFileSync((a as any).path, 'utf8').toString().trim();
+                            } else if ((a as any).body) {
+                                val = Buffer.isBuffer((a as any).body) ? (a as any).body.toString() : String((a as any).body);
+                            }
+                        } catch (e) {
+                            // ignore read errors
+                        }
+                        if (val) row.apiStatus = val;
+                    }
+                }
+            } catch (e) { /* ignore */ }
+
             this.apiResults.push(row);
         } else if (/\/02_ui\//.test(normalized) || normalized.includes("/02_ui") || normalized.includes("/ui/")) {
             this.uiResults.push(row);
@@ -33,14 +52,23 @@ class ExcelReporter implements Reporter {
     async onEnd(result: FullResult) {
         const workbook = new ExcelJS.Workbook();
 
-        const makeSheet = (name: string, rows: { name: string; status: string; durationMs: number }[]) => {
+        const makeSheet = (name: string, rows: any[], isApi = false) => {
             const sheet = workbook.addWorksheet(name);
 
-            sheet.columns = [
-                { header: "Test Name", key: "name", width: 120 },
-                { header: "Status", key: "status", width: 15 },
-                { header: "Duration (ms)", key: "durationMs", width: 18 },
-            ];
+            if (isApi) {
+                sheet.columns = [
+                    { header: "Test Name", key: "name", width: 120 },
+                    { header: "Status", key: "status", width: 15 },
+                    { header: "Response Status", key: "apiStatus", width: 18 },
+                    { header: "Duration (ms)", key: "durationMs", width: 18 },
+                ];
+            } else {
+                sheet.columns = [
+                    { header: "Test Name", key: "name", width: 120 },
+                    { header: "Status", key: "status", width: 15 },
+                    { header: "Duration (ms)", key: "durationMs", width: 18 },
+                ];
+            }
 
             // header style
             const headerRow = sheet.getRow(1);
@@ -52,7 +80,9 @@ class ExcelReporter implements Reporter {
 
             let rowIndex = 2;
             for (const r of rows) {
-                const excelRow = sheet.addRow({ name: r.name, status: r.status, durationMs: r.durationMs });
+                const rowData: any = { name: r.name, status: r.status, durationMs: r.durationMs };
+                if (isApi) rowData.apiStatus = r.apiStatus || '';
+                const excelRow = sheet.addRow(rowData);
 
                 const bgColor = rowIndex % 2 === 0 ? "FFF2F2F2" : "FFFFFFFF";
                 excelRow.eachCell((cell) => {
@@ -65,15 +95,22 @@ class ExcelReporter implements Reporter {
                 else if (r.status === "failed") statusCell.font = { color: { argb: "FFFF0000" }, bold: true };
                 else statusCell.font = { color: { argb: "FFB8860B" }, bold: true };
 
-                const durationCell = excelRow.getCell(3);
+                // duration cell index depends on isApi
+                const durationCell = excelRow.getCell(isApi ? 4 : 3);
                 durationCell.value = Number(r.durationMs || 0);
+
+                // if API, style the apiStatus column (3)
+                if (isApi) {
+                    const apiCell = excelRow.getCell(3);
+                    apiCell.alignment = { horizontal: 'center' };
+                }
 
                 rowIndex++;
             }
         };
 
-        makeSheet("API Tests", this.apiResults);
-        makeSheet("UI Tests", this.uiResults);
+        makeSheet("API Tests", this.apiResults, true);
+        makeSheet("UI Tests", this.uiResults, false);
 
         // Summary
         const summary = workbook.addWorksheet("Summary");

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { attachApiStatus } from "../../utils/attach-response";
 
 const apis: { endpoint: string; payload: any }[] = [
     { endpoint: "/api/ActiveHoa/GetActiveHoa", payload: {} },
@@ -121,10 +122,13 @@ const apis: { endpoint: string; payload: any }[] = [
 ];
 
 for (const { endpoint, payload } of apis) {
-    test(`POST ${endpoint}`, async ({ request }) => {
+    test(`POST ${endpoint}`, async ({ request }, testInfo) => {
         const response = await request.post(endpoint, {
             data: payload,
         });
+
+        // attach HTTP status and response body for reporter
+        await attachApiStatus(testInfo, response);
 
         // Check the HTTP status
         expect(response.status(), `API FAILED → ${endpoint}`).toBe(200);
