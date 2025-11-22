@@ -60,9 +60,9 @@ test("Bill Forward Test", async ({ pageWithToken }) => {
                 items = page.locator('li[role="option"]');
                 await items.first().waitFor({ state: "visible" });
             }
-            await items.nth(i).waitFor({ state: "visible" });
+            await page.waitForTimeout(500);
             await items.nth(i).click();
-            await page.waitForTimeout(1000);
+            await page.waitForTimeout(500);
 
             await page.getByRole("button", { name: "Add" }).click();
         }
