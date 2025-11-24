@@ -4,7 +4,7 @@ import fs from "fs";
 import type { Reporter, FullResult, TestCase, TestResult } from "@playwright/test/reporter";
 
 class ExcelReporter implements Reporter {
-    private apiResults: { name: string; status: string; durationMs: number; apiStatus?: string; apiResponseStatus?: string | number | null; apiMessage?: string | null; screenshot?: string }[] = [];
+    private apiResults: { name: string; status: string; durationMs: number; apiStatus?: string; apiResponseStatus?: string | number | null; apiMessage?: string | null }[] = [];
     private uiResults: { name: string; status: string; durationMs: number; screenshot?: string }[] = [];
 
     onTestEnd(test: TestCase, result: TestResult) {
@@ -62,19 +62,19 @@ class ExcelReporter implements Reporter {
                             }
                         }
                     }
-                    // detect screenshots
-                    try {
-                        const lower = (a.name || '').toLowerCase();
-                        const p = (a as any).path || null;
-                        const ct = (a as any).contentType || '';
-                        if (lower.includes('screenshot') || (p && String(p).toLowerCase().endsWith('.png')) || ct.includes('image')) {
-                            if (result.status === 'failed' && (a as any).path) row.screenshot = (a as any).path;
-                        }
-                    } catch (e) { }
+                    // API tests do not need screenshots; skip any image attachments here
                 }
             } catch (e) { }
 
-            this.apiResults.push(row);
+            // push a sanitized object to apiResults that excludes any screenshot field
+            this.apiResults.push({
+                name: row.name,
+                status: row.status,
+                durationMs: row.durationMs,
+                apiStatus: row.apiStatus,
+                apiResponseStatus: row.apiResponseStatus,
+                apiMessage: row.apiMessage,
+            });
         } else if (/\/02_ui\//.test(normalized) || normalized.includes("/02_ui") || normalized.includes("/ui/")) {
             // capture screenshot attachments for UI tests
             try {
@@ -102,13 +102,17 @@ class ExcelReporter implements Reporter {
         // column definitions and styles
         const makeSheet = (name: string, rows: any[], isApi = false) => {
             const sheet = workbook.addWorksheet(name);
+            // Freeze the top header row
+            try {
+                sheet.views = [{ state: 'frozen', ySplit: 1 } as any];
+            } catch (e) { }
 
             if (isApi) {
                 sheet.columns = [
                     { header: "Test Name", key: "name", width: 120 },
                     { header: "Status", key: "status", width: 15 },
                     { header: "Response Status", key: "apiStatus", width: 18 },
-                    { header: "API Response Status", key: "apiResponseStatus", width: 18 },
+                    { header: "API Response Status", key: "apiResponseStatus", width: 20 },
                     { header: "Message", key: "apiMessage", width: 80 },
                     { header: "Duration (s)", key: "durationMs", width: 12 },
                 ];
@@ -176,7 +180,7 @@ class ExcelReporter implements Reporter {
                             const href = 'file:///' + absolute.split(path.sep).join('/');
                             ssCell.value = { text: path.basename(absolute), hyperlink: href };
                             ssCell.font = { color: { argb: 'FF0000FF' }, underline: true };
-                        } catch (e) { /* ignore */ }
+                        } catch (e) { }
                     }
                 }
 
